@@ -159,7 +159,7 @@ var Tunnel = function(opt) {
     self._closed = false;
     self._opt = opt || {};
 
-    self._opt.host = self._opt.host || 'https://localtunnel.me';
+    self._opt.host = self._opt.host || 'http://develer.me';
 };
 
 Tunnel.prototype.__proto__ = EventEmitter.prototype;
