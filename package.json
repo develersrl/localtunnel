@@ -1,11 +1,11 @@
 {
-  "author": "Roman Shtylman <shtylman@gmail.com>",
-  "name": "localtunnel",
+  "author": "Giovanni Bajo <rasky@develer.com>",
+  "name": "client.develer.me",
   "description": "expose localhost to the world",
   "version": "1.1.0",
   "repository": {
     "type": "git",
-    "url": "git://github.com/shtylman/localtunnel.git"
+    "url": "git://github.com/develersrl/client.develer.me.git"
   },
   "dependencies": {
     "request": "2.11.4",
