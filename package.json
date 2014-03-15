@@ -19,7 +19,7 @@
     "test": "mocha --ui qunit --reporter list -- test/index.js"
   },
   "bin": {
-    "lt": "./bin/client"
+    "dme": "./bin/client"
   },
   "main": "./client.js"
 }
