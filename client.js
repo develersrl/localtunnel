@@ -75,7 +75,7 @@ TunnelCluster.prototype.open = function() {
         // emit connection refused errors immediately, because they
         // indicate that the tunnel can't be established.
         if (err.code === 'ECONNREFUSED') {
-            self.emit('error', new Error('connection refused: ' + remote_host + ':' + remote_port + ' (check your firewall settings)'));
+            self.emit('error', new Error('connection refused: ' + remote_host + ':' + remote_port + ' (if you are not in Develer, make sure your VPN is open)'));
         }
         else {
             self.emit('error', err);
@@ -255,6 +255,10 @@ Tunnel.prototype._establish = function(info) {
         }
 
         tunnels.open();
+    });
+
+    tunnels.on('error', function(err) {
+        self.emit('error', err);
     });
 
     // establish as many tunnels as allowed
