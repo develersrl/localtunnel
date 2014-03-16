@@ -3,6 +3,7 @@
   "name": "client.develer.me",
   "description": "expose localhost to the world",
   "version": "1.1.0",
+  "private": true,
   "repository": {
     "type": "git",
     "url": "git://github.com/develersrl/client.develer.me.git"
