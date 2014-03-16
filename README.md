@@ -2,7 +2,7 @@
 
 Local Develer fork of localtunnel.me.
 
-See http://develer.me for more information and instructions.
+See https://develer.me for more information and instructions.
 
 NOTE: usage is reserved to Develer staff
 
