@@ -26,7 +26,7 @@ var auxports = [];
 if (argv.auxports) {
     auxports = argv.auxports.toString().split(' ');
 }
-if (argv.gulp) {
+if (argv.livereload) {
     auxports.push('35729');
 }
 var opt = {
@@ -68,15 +68,13 @@ for(var i = 0 ; i < auxports.length; i++) {
             subdomain: argv.subdomain,
         }
 
-        console.log(opt);
-
         lt_client(opt.port, opt, function(err, tunnel) {
             if (err) {
                 console.error(err);
                 return process.exit(1);
             }
 
-            console.log('your url is: %s %s', tunnel.url, opt.port);
+            console.log('your url is: %s', tunnel.url);
 
             tunnel.on('error', function(err) {
                 console.error(err);
