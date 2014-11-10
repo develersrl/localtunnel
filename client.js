@@ -30,10 +30,16 @@ HeaderHostTransformer.prototype._transform = function (chunk, enc, cb) {
 
     // after replacing the first instance of the Host header
     // we just become a regular passthrough
-    self.push(chunk.replace(/(\r\nHost: )\S+/, function(match, $1) {
-        self._transform = undefined;
-        return $1 + self.host;
-    }));
+    if (!self.replaced) {
+        self.push(chunk.replace(/(\r\nHost: )\S+/, function(match, $1) {
+            self.replaced = true;
+            return $1 + self.host;
+        }));
+    }
+    else {
+        self.push(chunk);
+    }
+
     cb();
 };
 
@@ -60,7 +66,7 @@ TunnelCluster.prototype.open = function() {
     var remote_host = opt.remote_host;
     var remote_port = opt.remote_port;
 
-    var local_host = opt.local_host;
+    var local_host = opt.local_host || 'localhost';
     var local_port = opt.local_port;
 
     debug('establishing tunnel %s:%s <> %s:%s', local_host, local_port, remote_host, remote_port);
@@ -71,29 +77,24 @@ TunnelCluster.prototype.open = function() {
         port: remote_port
     });
 
-    remote.once('error', function(err) {
+    remote.on('error', function(err) {
         // emit connection refused errors immediately, because they
         // indicate that the tunnel can't be established.
         if (err.code === 'ECONNREFUSED') {
             self.emit('error', new Error('connection refused: ' + remote_host + ':' + remote_port + ' (if you are not in Develer, make sure your VPN is open)'));
         }
-        else {
-            self.emit('error', err);
-        }
 
-        setTimeout(function() {
-            self.emit('dead');
-        }, 1000);
+        remote.end();
     });
 
     function conn_local() {
-        debug('connecting locally to %s:%d', local_host, local_port);
-
         if (remote.destroyed) {
+            debug('remote destroyed');
             self.emit('dead');
             return;
         }
 
+        debug('connecting locally to %s:%d', local_host, local_port);
         remote.pause();
 
         // connection to local http server
@@ -103,19 +104,24 @@ TunnelCluster.prototype.open = function() {
         });
 
         function remote_close() {
+            debug('remote close');
             self.emit('dead');
             local.end();
         };
 
         remote.once('close', remote_close);
 
-        local.on('error', function(err) {
+        // TODO some languages have single threaded servers which makes opening up
+        // multiple local connections impossible. We need a smarter way to scale
+        // and adjust for such instances to avoid beating on the door of the server
+        local.once('error', function(err) {
+            debug('local error %s', err.message);
             local.end();
 
             remote.removeListener('close', remote_close);
 
             if (err.code !== 'ECONNREFUSED') {
-                return local.emit('error', err);
+                return remote.end();
             }
 
             // retrying connection to local server
@@ -128,10 +134,11 @@ TunnelCluster.prototype.open = function() {
 
             var stream = remote;
 
-            // if user requested something other than localhost
+            // if user requested specific local host
             // then we use host header transform to replace the host header
-            if (local_host !== 'localhost') {
-                stream = remote.pipe(HeaderHostTransformer({ host: local_host }));
+            if (opt.local_host) {
+                debug('transform Host header to %s', opt.local_host);
+                stream = remote.pipe(HeaderHostTransformer({ host: opt.local_host }));
             }
 
             stream.pipe(local).pipe(remote);
@@ -146,8 +153,8 @@ TunnelCluster.prototype.open = function() {
     // tunnel is considered open when remote connects
     remote.once('connect', function() {
         self.emit('open', remote);
+        conn_local();
     });
-    remote.once('connect', conn_local);
 };
 
 var Tunnel = function(opt) {
@@ -194,6 +201,11 @@ Tunnel.prototype._init = function(cb) {
                 return setTimeout(get_url, 1000);
             }
 
+            if (res.statusCode !== 200) {
+                var err = new Error((body && body.message) || 'localtunnel server returned an error, please try again');
+                return cb(err);
+            }
+
             var port = body.port;
             var host = upstream.hostname;
 
@@ -214,7 +226,7 @@ Tunnel.prototype._establish = function(info) {
     var self = this;
     var opt = self._opt;
 
-    info.local_host = opt.local_host || 'localhost';
+    info.local_host = opt.local_host;
     info.local_port = opt.port;
 
     var tunnels = self.tunnel_cluster = TunnelCluster(info);
@@ -306,4 +318,5 @@ module.exports = function localtunnel(port, opt, fn) {
 
         fn(null, client);
     });
+    return client;
 };
